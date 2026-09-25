@@ -157,4 +157,64 @@ describe("main", function()
             [[ours2]],
         })
     end)
+
+    it("does not render labels for a buffer outside a Git repository", function()
+        lines = {
+            [[<<<<<<< HEAD]],
+            [[ours]],
+            [[||||||| 229039e]],
+            [[base]],
+            [[=======]],
+            [[theirs]],
+            [[>>>>>>> new_branch]],
+        }
+
+        local labels = exec_lua(
+            [[
+                vim.api.nvim_buf_set_lines(0, 0, -1, true, ({...})[1])
+                require("conflict-marker").check()
+
+                local ns = vim.api.nvim_get_namespaces()["conflict-marker.nvim/hl"]
+                local result = {}
+                for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })) do
+                    local details = mark[4]
+                    if details.virt_lines then
+                        table.insert(result, {
+                            mark[2],
+                            details.virt_lines[1][1][1],
+                            details.virt_lines[1][1][2],
+                            details.virt_lines_above,
+                        })
+                    end
+                end
+                return result
+            ]],
+            lines
+        )
+
+        assert.is_same(labels, {})
+    end)
+
+    it("renders commit metadata as one concise line", function()
+        local line = exec_lua([[
+            local Git = require("conflict-marker.Git")
+            return Git.virtual_lines("ours", {
+                subject = "fix conflict metadata",
+                message = "fix conflict metadata\n\nDetails",
+                author = "Alice",
+                email = "alice@example.com",
+                date = "2026-09-25T12:30:00+08:00",
+                hash = "1234567890abcdef",
+            })
+        ]])
+
+        assert.is_same(line, {
+            {
+                {
+                    "Ours: fix conflict metadata · Alice · 2026-09-25 · 1234567",
+                    "ConflictCommit",
+                },
+            },
+        })
+    end)
 end)

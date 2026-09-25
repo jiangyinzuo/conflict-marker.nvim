@@ -65,3 +65,8 @@ vim.api.nvim_set_hl(0, const.HL_CONFLICT_THEIRS_MARKER, {
     bg = diff_add.bg and multiply_color(diff_add.bg, 0.8),
     fg = "LightGray",
 })
+
+vim.api.nvim_set_hl(0, const.HL_CONFLICT_COMMIT, {
+    default = true,
+    link = "Comment",
+})

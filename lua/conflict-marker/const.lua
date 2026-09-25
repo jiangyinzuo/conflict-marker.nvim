@@ -8,5 +8,6 @@ M.HL_CONFLICT_MID = "ConflictMid"
 
 M.HL_CONFLICT_BASE_MARKER = "ConflictBaseMarker"
 M.HL_CONFLICT_BASE = "ConflictBase"
+M.HL_CONFLICT_COMMIT = "ConflictCommit"
 
 return M

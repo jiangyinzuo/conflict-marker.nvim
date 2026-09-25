@@ -57,6 +57,13 @@ You can customize these colors, I just picked something at random :P
 - `Conflict diffBaseTheirs`: open 2 windows to diff base -> theirs
 - `Conflict hlRefresh`: refresh the highlight in the buffer
 
+When the file is an unmerged path in a Git repository, the `ours`, `base`, and
+`theirs` labels also show a concise one-line summary with the commit message,
+author, commit date, and short commit hash. The plugin reads Git's index stages and operation
+state, so this works for merge, rebase, cherry-pick, revert, and conflicts
+without an operation-specific marker. If Git cannot identify a commit (for
+example, a conflict created from an uncommitted patch), the original labels
+remain visible. Buffers outside a Git repository do not get commit virtual lines.
 
 
 ## Highlighting

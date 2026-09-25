@@ -1,5 +1,6 @@
 local const = require("conflict-marker.const")
 local init = require("conflict-marker")
+local Git = require("conflict-marker.Git")
 
 local NS_HL = vim.api.nvim_create_namespace("conflict-marker.nvim/hl")
 
@@ -30,7 +31,7 @@ function Conflict:new(bufnr)
         bufnr = vim.api.nvim_get_current_buf()
     end
     ---@type conflict-marker.Conflict
-    local obj = { bufnr = bufnr }
+    local obj = { bufnr = bufnr, git_commits = nil, git_repo = false }
     return setmetatable(obj, { __index = self })
 end
 
@@ -82,18 +83,18 @@ function Conflict:refresh_hl_cursor()
             base_delta = mid - base
         end
 
-        self:apply_line_highlight(start - 1, start, const.HL_CONFLICT_OURS_MARKER, "(Our changes)")
+        self:apply_line_highlight(start - 1, start, const.HL_CONFLICT_OURS_MARKER, "(Our changes)", "ours")
         self:apply_line_highlight(start, mid - base_delta - 1, const.HL_CONFLICT_OURS)
 
         if base ~= 0 then
-            self:apply_line_highlight(base - 1, base, const.HL_CONFLICT_BASE_MARKER, "(Base)")
+            self:apply_line_highlight(base - 1, base, const.HL_CONFLICT_BASE_MARKER, "(Base)", "base")
             self:apply_line_highlight(base, mid - 1, const.HL_CONFLICT_BASE)
         end
 
         self:apply_line_highlight(mid - 1, mid, const.HL_CONFLICT_MID, "")
 
         self:apply_line_highlight(mid, ending - 1, const.HL_CONFLICT_THEIRS)
-        self:apply_line_highlight(ending - 1, ending, const.HL_CONFLICT_THEIRS_MARKER, "(Theirs changes)")
+        self:apply_line_highlight(ending - 1, ending, const.HL_CONFLICT_THEIRS_MARKER, "(Theirs changes)", "theirs")
     end)
 end
 
@@ -130,14 +131,21 @@ end
 ---@param ending integer
 ---@param group string
 ---@param virt_text? string
-function Conflict:apply_line_highlight(start, ending, group, virt_text)
-    if virt_text then
-        vim.api.nvim_buf_set_extmark(self.bufnr, NS_HL, start, 0, {
+---@param role? string
+function Conflict:apply_line_highlight(start, ending, group, virt_text, role)
+    if virt_text and virt_text ~= "" and (not role or self.git_repo) then
+        local opts = {
             invalidate = true,
-            virt_text = { { virt_text } },
+            virt_lines = { { { virt_text, const.HL_CONFLICT_COMMIT } } },
+            virt_lines_above = false,
             hl_mode = "combine",
             priority = 0,
-        })
+        }
+        local commit = role and self.git_commits and self.git_commits[role]
+        if commit then
+            opts.virt_lines = Git.virtual_lines(role, commit)
+        end
+        vim.api.nvim_buf_set_extmark(self.bufnr, NS_HL, start, 0, opts)
     end
 
     vim.api.nvim_buf_set_extmark(self.bufnr, NS_HL, start, 0, {
@@ -166,6 +174,8 @@ function Conflict:init_hl()
     }) do
         vim.api.nvim_set_hl(NS_HL, v, {})
     end
+
+    self.git_commits, self.git_repo = Git.get_conflict_commits(self.bufnr)
 
     vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
         group = augroup,
